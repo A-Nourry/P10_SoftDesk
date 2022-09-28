@@ -1,8 +1,11 @@
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ModelSerializer, PrimaryKeyRelatedField
 from .models import Projects, Contributors, Issues, Comments
 
 
 class ProjectsSerializer(ModelSerializer):
+
+    author_user_id = PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Projects
         fields = ["id", "title", "description", "type", "author_user_id"]
