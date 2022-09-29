@@ -18,7 +18,7 @@ from django.urls import path, include
 from rest_framework import routers
 
 from authentication.views import SignUpView, LoginView
-from myapp.views import ProjectView
+from myapp.views import ProjectView, DetailProjectView
 
 router = routers.SimpleRouter()
 
@@ -28,5 +28,6 @@ urlpatterns = [
     path("api/signup/", SignUpView.as_view(), name="signup"),
     path("api/login/", LoginView.as_view(), name="login"),
     path("api/projects/", ProjectView.as_view(), name="projects"),
+    path("api/projects/<int:project_id>", DetailProjectView.as_view(), name="projects"),
     path("api/", include(router.urls)),
 ]
