@@ -14,7 +14,7 @@ class Projects(models.Model):
 class Contributors(models.Model):
     user_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     project_id = models.ForeignKey(Projects, on_delete=models.CASCADE)
-    permission = models.Choices
+    permission = models.CharField(max_length=128, verbose_name="rôle")
     role = models.CharField(max_length=128, verbose_name="rôle")
 
 
@@ -28,7 +28,7 @@ class Issues(models.Model):
     author_user_id = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE
     )
-    assignee_user_id = models.OneToOneField(
+    assignee_user_id = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="assignee_user_id",
