@@ -11,13 +11,18 @@ class ProjectsSerializer(ModelSerializer):
         fields = ["id", "title", "description", "type", "author_user_id"]
 
 
-class ContributorsSerializers(ModelSerializer):
+class ContributorsSerializer(ModelSerializer):
+    project_id = PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Contributors
         fields = ["id", "user_id", "project_id", "permission", "role"]
 
 
-class IssuesSerializers(ModelSerializer):
+class IssuesSerializer(ModelSerializer):
+    author_user_id = PrimaryKeyRelatedField(read_only=True)
+    project_id = PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Issues
         fields = [
@@ -34,7 +39,7 @@ class IssuesSerializers(ModelSerializer):
         ]
 
 
-class CommentsSerializers(ModelSerializer):
+class CommentsSerializer(ModelSerializer):
     class Meta:
         model = Comments
         fields = ["id", "description", "author_user_id", "issue_id", "created_time"]
