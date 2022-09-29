@@ -53,3 +53,56 @@ class ProjectView(MultipleSerializerMixin, APIView):
             return Response(data=response, status=status.HTTP_201_CREATED)
 
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DetailProjectView(MultipleSerializerMixin, APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    serializer_class = ProjectsSerializer
+
+    def get(self, request, project_id, *args, **kwargs):
+
+        projects = Projects.objects.filter(id=project_id)
+
+        serializer = self.serializer_class(projects, many=True)
+
+        return Response(serializer.data)
+
+    def put(self, request, project_id):
+        data = request.data
+
+        project = Projects.objects.get(id=project_id)
+
+        serializer = self.serializer_class(project, data=data)
+
+        if serializer.is_valid():
+            serializer.save()
+
+            response = {
+                "message": "Projet modifié avec succès !",
+                "data": serializer.data,
+            }
+
+            return Response(data=response, status=status.HTTP_201_CREATED)
+
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, project_id):
+
+        project = Projects.objects.get(id=project_id)
+
+        current_user = User.objects.get(id=request.user.id)
+
+        if project.author_user_id == current_user:
+            project.delete()
+
+            response = {
+                "message": "Projet supprimé avec succès !",
+            }
+        else:
+            response = {
+                "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
+            }
+
+        return Response(data=response, status=status.HTTP_201_CREATED)
