@@ -40,6 +40,9 @@ class IssuesSerializer(ModelSerializer):
 
 
 class CommentsSerializer(ModelSerializer):
+    author_user_id = PrimaryKeyRelatedField(read_only=True)
+    issue_id = PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Comments
         fields = ["id", "description", "author_user_id", "issue_id", "created_time"]
