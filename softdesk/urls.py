@@ -25,6 +25,8 @@ from myapp.views import (
     UserContributorsView,
     ProjectIssueView,
     IssueView,
+    IssueCommentView,
+    CommentView,
 )
 
 router = routers.SimpleRouter()
@@ -54,6 +56,16 @@ urlpatterns = [
     path(
         "api/projects/<int:project_id>/issues/<int:issue_id>",
         IssueView.as_view(),
+        name="projects",
+    ),
+    path(
+        "api/projects/<int:project_id>/issues/<int:issue_id>/comments/",
+        IssueCommentView.as_view(),
+        name="projects",
+    ),
+    path(
+        "api/projects/<int:project_id>/issues/<int:issue_id>/comments/<int:comment_id>",
+        CommentView.as_view(),
         name="projects",
     ),
     path("api/", include(router.urls)),
