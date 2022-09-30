@@ -5,8 +5,13 @@ from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 
-from .models import Projects, Contributors, Issues
-from .serializers import ProjectsSerializer, ContributorsSerializer, IssuesSerializer
+from .models import Projects, Contributors, Issues, Comments
+from .serializers import (
+    ProjectsSerializer,
+    ContributorsSerializer,
+    IssuesSerializer,
+    CommentsSerializer,
+)
 
 User = get_user_model()
 
@@ -117,7 +122,7 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
 
 class ContributorsView(MultipleSerializerMixin, APIView):
 
-    """permission_classes = [IsAuthenticated]"""
+    permission_classes = [IsAuthenticated]
 
     serializer_class = ContributorsSerializer
 
@@ -161,7 +166,7 @@ class ContributorsView(MultipleSerializerMixin, APIView):
 
 class UserContributorsView(MultipleSerializerMixin, APIView):
 
-    """permission_classes = [IsAuthenticated]"""
+    permission_classes = [IsAuthenticated]
 
     serializer_class = ContributorsSerializer
 
@@ -191,7 +196,7 @@ class UserContributorsView(MultipleSerializerMixin, APIView):
 
 class ProjectIssueView(MultipleSerializerMixin, APIView):
 
-    """permission_classes = [IsAuthenticated]"""
+    permission_classes = [IsAuthenticated]
 
     serializer_class = IssuesSerializer
 
@@ -227,7 +232,7 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
 
 class IssueView(MultipleSerializerMixin, APIView):
 
-    """permission_classes = [IsAuthenticated]"""
+    permission_classes = [IsAuthenticated]
 
     serializer_class = IssuesSerializer
 
@@ -272,6 +277,110 @@ class IssueView(MultipleSerializerMixin, APIView):
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce problème: action non autorisé !",
+            }
+
+        return Response(data=response, status=status.HTTP_201_CREATED)
+
+
+class IssueCommentView(MultipleSerializerMixin, APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    serializer_class = CommentsSerializer
+
+    def get(self, request, project_id, issue_id, *args, **kwargs):
+
+        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+
+        comment = Comments.objects.filter(issue_id=issue)
+
+        serializer = self.serializer_class(comment, many=True)
+
+        return Response(serializer.data)
+
+    def post(self, request, project_id, issue_id):
+        data = request.data
+
+        serializer = self.serializer_class(data=data)
+
+        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+
+        current_user = User.objects.get(id=request.user.id)
+
+        if serializer.is_valid():
+            serializer.save(issue_id=issue, author_user_id=current_user)
+
+            response = {
+                "message": "Problème créé avec succès !",
+                "data": serializer.data,
+            }
+
+            return Response(data=response, status=status.HTTP_201_CREATED)
+
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CommentView(MultipleSerializerMixin, APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    serializer_class = CommentsSerializer
+
+    def get(self, request, project_id, issue_id, comment_id, *args, **kwargs):
+
+        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+
+        comment = Comments.objects.filter(id=comment_id, issue_id=issue)
+
+        serializer = self.serializer_class(comment, many=True)
+
+        return Response(serializer.data)
+
+    def put(self, request, project_id, issue_id, comment_id):
+        data = request.data
+
+        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+
+        comment = Comments.objects.get(id=comment_id, issue_id=issue)
+
+        current_user = User.objects.get(id=request.user.id)
+
+        serializer = self.serializer_class(comment, data=data)
+
+        if serializer.is_valid() and comment.author_user_id == current_user:
+            serializer.save()
+
+            response = {
+                "message": "commentaire modifié avec succès !",
+                "data": serializer.data,
+            }
+
+            return Response(data=response, status=status.HTTP_201_CREATED)
+
+        else:
+            response = {
+                "message": "Vous n'êtes pas l'auteur de ce commentaire : action non autorisé !",
+            }
+
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, project_id, issue_id, comment_id):
+
+        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+
+        comment = Comments.objects.get(id=comment_id, issue_id=issue)
+
+        current_user = User.objects.get(id=request.user.id)
+
+        if comment.author_user_id == current_user:
+            comment.delete()
+
+            response = {
+                "message": "Commentaire supprimé avec succès !",
+            }
+        else:
+            response = {
+                "message": "Vous n'êtes pas l'auteur de ce commentaire: action non autorisé !",
             }
 
         return Response(data=response, status=status.HTTP_201_CREATED)
