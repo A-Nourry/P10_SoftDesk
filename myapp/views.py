@@ -91,11 +91,10 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
         ):
             response = {"message": "Vous n'avez pas accès à ce projet !"}
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
 
         else:
             serializer = self.serializer_class(projects, many=False)
-
             return Response(serializer.data)
 
     def put(self, request, project_id):
@@ -136,6 +135,8 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
             response = {
                 "message": "Projet supprimé avec succès !",
             }
+
+            return Response(data=response)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
@@ -229,15 +230,43 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
     serializer_class = IssuesSerializer
 
     def get(self, request, project_id, *args, **kwargs):
+        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors_user_ids = []
 
-        issue = Issues.objects.filter(project_id=project_id)
+        for contributor in contributors:
+            contributors_user_ids.append(contributor.user_id.id)
 
-        serializer = self.serializer_class(issue, many=True)
+        projects = Projects.objects.get(id=project_id)
 
-        return Response(serializer.data)
+        current_user = User.objects.get(id=request.user.id)
+
+        issue = Issues.objects.filter(project_id=projects.id)
+        print(issue)
+
+        if (
+            current_user.id not in contributors_user_ids
+            and projects.author_user_id != current_user
+        ):
+            response = {"message": "Vous n'avez pas accès à ce projet !"}
+
+            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            serializer = self.serializer_class(issue, many=True)
+            return Response(serializer.data)
 
     def post(self, request, project_id):
         data = request.data
+
+        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors_user_ids = []
+
+        for contributor in contributors:
+            contributors_user_ids.append(contributor.user_id.id)
+
+        current_user = User.objects.get(id=request.user.id)
+
+        projects = Projects.objects.get(id=project_id)
 
         serializer = self.serializer_class(data=data)
 
@@ -245,17 +274,28 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
 
         current_user = User.objects.get(id=request.user.id)
 
-        if serializer.is_valid():
-            serializer.save(project_id=project, author_user_id=current_user)
-
+        if (
+            current_user.id not in contributors_user_ids
+            and projects.author_user_id != current_user
+        ):
             response = {
-                "message": "Problème créé avec succès !",
-                "data": serializer.data,
+                "message": "Vous ne participez pas à ce projet : Accès non autorisé !"
             }
 
-            return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            if serializer.is_valid():
+                serializer.save(project_id=project, author_user_id=current_user)
+
+                response = {
+                    "message": "Problème créé avec succès !",
+                    "data": serializer.data,
+                }
+
+                return Response(data=response, status=status.HTTP_201_CREATED)
+
+            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class IssueView(MultipleSerializerMixin, APIView):
@@ -288,7 +328,7 @@ class IssueView(MultipleSerializerMixin, APIView):
                 "message": "Vous n'êtes pas l'auteur de ce problème : action non autorisé !",
             }
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response)
 
     def delete(self, request, project_id, issue_id):
 
@@ -302,12 +342,14 @@ class IssueView(MultipleSerializerMixin, APIView):
             response = {
                 "message": "Problème supprimé avec succès !",
             }
+
+            return Response(data=response, status=status.HTTP_201_CREATED)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce problème: action non autorisé !",
             }
 
-        return Response(data=response, status=status.HTTP_201_CREATED)
+        return Response(data=response)
 
 
 class IssueCommentView(MultipleSerializerMixin, APIView):
@@ -317,35 +359,75 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
     serializer_class = CommentsSerializer
 
     def get(self, request, project_id, issue_id, *args, **kwargs):
+        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors_user_ids = []
+
+        for contributor in contributors:
+            contributors_user_ids.append(contributor.user_id.id)
+
+        projects = Projects.objects.get(id=project_id)
+
+        current_user = User.objects.get(id=request.user.id)
 
         issue = Issues.objects.get(id=issue_id, project_id=project_id)
 
         comment = Comments.objects.filter(issue_id=issue)
 
-        serializer = self.serializer_class(comment, many=True)
+        if (
+            current_user.id not in contributors_user_ids
+            and projects.author_user_id != current_user
+        ):
+            response = {"message": "Vous n'avez pas accès à ce projet !"}
 
-        return Response(serializer.data)
+            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+
+            serializer = self.serializer_class(comment, many=True)
+
+            return Response(serializer.data)
 
     def post(self, request, project_id, issue_id):
+        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors_user_ids = []
+
+        for contributor in contributors:
+            contributors_user_ids.append(contributor.user_id.id)
+
+        projects = Projects.objects.get(id=project_id)
+
+        current_user = User.objects.get(id=request.user.id)
+
+        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+
         data = request.data
 
         serializer = self.serializer_class(data=data)
 
         issue = Issues.objects.get(id=issue_id, project_id=project_id)
 
-        current_user = User.objects.get(id=request.user.id)
-
-        if serializer.is_valid():
-            serializer.save(issue_id=issue, author_user_id=current_user)
-
+        if (
+            current_user.id not in contributors_user_ids
+            and projects.author_user_id != current_user
+        ):
             response = {
-                "message": "Problème créé avec succès !",
-                "data": serializer.data,
+                "message": "Vous ne participez pas à ce projet : Accès non autorisé !"
             }
 
-            return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            if serializer.is_valid():
+                serializer.save(issue_id=issue, author_user_id=current_user)
+
+                response = {
+                    "message": "Commentaire créé avec succès !",
+                    "data": serializer.data,
+                }
+
+                return Response(data=response, status=status.HTTP_201_CREATED)
+
+            return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CommentView(MultipleSerializerMixin, APIView):
@@ -355,14 +437,35 @@ class CommentView(MultipleSerializerMixin, APIView):
     serializer_class = CommentsSerializer
 
     def get(self, request, project_id, issue_id, comment_id, *args, **kwargs):
+        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors_user_ids = []
+
+        for contributor in contributors:
+            contributors_user_ids.append(contributor.user_id.id)
+
+        projects = Projects.objects.get(id=project_id)
+
+        current_user = User.objects.get(id=request.user.id)
 
         issue = Issues.objects.get(id=issue_id, project_id=project_id)
 
-        comment = Comments.objects.filter(id=comment_id, issue_id=issue)
+        comment = Comments.objects.get(id=comment_id, issue_id=issue)
 
-        serializer = self.serializer_class(comment, many=True)
+        if (
+            current_user.id not in contributors_user_ids
+            and projects.author_user_id != current_user
+        ):
+            response = {
+                "message": "Vous ne participez pas à ce projet : Accès refusé !"
+            }
 
-        return Response(serializer.data)
+            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+
+            serializer = self.serializer_class(comment, many=False)
+
+            return Response(serializer.data)
 
     def put(self, request, project_id, issue_id, comment_id):
         data = request.data
@@ -390,7 +493,7 @@ class CommentView(MultipleSerializerMixin, APIView):
                 "message": "Vous n'êtes pas l'auteur de ce commentaire : action non autorisé !",
             }
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response)
 
     def delete(self, request, project_id, issue_id, comment_id):
 
@@ -406,9 +509,11 @@ class CommentView(MultipleSerializerMixin, APIView):
             response = {
                 "message": "Commentaire supprimé avec succès !",
             }
+
+            return Response(data=response)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce commentaire: action non autorisé !",
             }
 
-        return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response)
