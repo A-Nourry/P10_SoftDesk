@@ -14,7 +14,7 @@ class Projects(models.Model):
 class Contributors(models.Model):
     user_id = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     project_id = models.ForeignKey(Projects, on_delete=models.CASCADE)
-    permission = models.CharField(max_length=128, verbose_name="rôle")
+    permission = models.CharField(max_length=128, verbose_name="permission")
     role = models.CharField(max_length=128, verbose_name="rôle")
 
 
