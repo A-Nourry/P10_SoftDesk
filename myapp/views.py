@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 from .models import Projects, Contributors, Issues, Comments
 from .serializers import (
@@ -33,8 +34,15 @@ class ProjectView(MultipleSerializerMixin, APIView):
     serializer_class = ProjectsSerializer
 
     def get(self, request, *args, **kwargs):
+        contributors = Contributors.objects.filter(user_id=request.user.id)
+        contributors_project_ids = []
 
-        projects = Projects.objects.filter(author_user_id=request.user.id)
+        for contributor in contributors:
+            contributors_project_ids.append(contributor.project_id.id)
+
+        projects = Projects.objects.filter(
+            Q(author_user_id=request.user.id) | Q(id__in=contributors_project_ids)
+        )
 
         serializer = self.serializer_class(projects, many=True)
 
@@ -67,12 +75,28 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
     serializer_class = ProjectsSerializer
 
     def get(self, request, project_id, *args, **kwargs):
+        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors_user_ids = []
 
-        projects = Projects.objects.filter(id=project_id)
+        for contributor in contributors:
+            contributors_user_ids.append(contributor.user_id.id)
 
-        serializer = self.serializer_class(projects, many=True)
+        projects = Projects.objects.get(id=project_id)
 
-        return Response(serializer.data)
+        current_user = User.objects.get(id=request.user.id)
+
+        if (
+            current_user.id not in contributors_user_ids
+            and projects.author_user_id != current_user
+        ):
+            response = {"message": "Vous n'avez pas accès à ce projet !"}
+
+            return Response(data=response)
+
+        else:
+            serializer = self.serializer_class(projects, many=False)
+
+            return Response(serializer.data)
 
     def put(self, request, project_id):
         data = request.data
@@ -98,7 +122,7 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
             }
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response)
 
     def delete(self, request, project_id):
 
@@ -117,7 +141,7 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
             }
 
-        return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response)
 
 
 class ContributorsView(MultipleSerializerMixin, APIView):
@@ -140,13 +164,15 @@ class ContributorsView(MultipleSerializerMixin, APIView):
         serializer = self.serializer_class(data=data)
 
         project = Projects.objects.get(id=project_id)
+        author = project.author_user_id
+        current_user = User.objects.get(id=request.user.id)
 
         contributors = Contributors.objects.filter(
             project_id=project, user_id=data["user_id"]
         )
 
         if (
-            serializer.is_valid() and len(contributors) < 1
+            serializer.is_valid() and len(contributors) < 1 and author == current_user
         ):  # verify if contributors doesn't already exist
             serializer.save(project_id=project)
 
@@ -158,10 +184,10 @@ class ContributorsView(MultipleSerializerMixin, APIView):
             return Response(data=response, status=status.HTTP_201_CREATED)
         else:
             response = {
-                "message": "ce contributeur à déjà été ajouté !",
+                "message": "Ce contributeur a déjà été ajouté ou vous n'êtes pas l'auteur de ce projet !",
             }
 
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response)
 
 
 class UserContributorsView(MultipleSerializerMixin, APIView):
@@ -186,12 +212,14 @@ class UserContributorsView(MultipleSerializerMixin, APIView):
             response = {
                 "message": "contributeur supprimé du projet avec succès !",
             }
+
+            return Response(data=response)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
             }
 
-        return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response)
 
 
 class ProjectIssueView(MultipleSerializerMixin, APIView):
