@@ -272,8 +272,6 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
 
         project = Projects.objects.get(id=project_id)
 
-        current_user = User.objects.get(id=request.user.id)
-
         if (
             current_user.id not in contributors_user_ids
             and projects.author_user_id != current_user
