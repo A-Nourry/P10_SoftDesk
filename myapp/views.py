@@ -5,6 +5,7 @@ from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist
 
 from .models import Projects, Contributors, Issues, Comments
 from .serializers import (
@@ -81,7 +82,11 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
         for contributor in contributors:
             contributors_user_ids.append(contributor.user_id.id)
 
-        projects = Projects.objects.get(id=project_id)
+        try:
+            projects = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -100,7 +105,11 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
     def put(self, request, project_id):
         data = request.data
 
-        project = Projects.objects.get(id=project_id)
+        try:
+            project = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -125,7 +134,11 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
 
     def delete(self, request, project_id):
 
-        project = Projects.objects.get(id=project_id)
+        try:
+            project = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -199,7 +212,11 @@ class UserContributorsView(MultipleSerializerMixin, APIView):
 
     def delete(self, request, project_id, user_id):
 
-        project = Projects.objects.get(id=project_id)
+        try:
+            project = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         user = User.objects.get(id=user_id)
 
@@ -236,7 +253,11 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
         for contributor in contributors:
             contributors_user_ids.append(contributor.user_id.id)
 
-        projects = Projects.objects.get(id=project_id)
+        try:
+            projects = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -266,7 +287,11 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
 
         current_user = User.objects.get(id=request.user.id)
 
-        projects = Projects.objects.get(id=project_id)
+        try:
+            projects = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(data=data)
 
@@ -305,7 +330,11 @@ class IssueView(MultipleSerializerMixin, APIView):
     def put(self, request, project_id, issue_id):
         data = request.data
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet ou problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -330,7 +359,11 @@ class IssueView(MultipleSerializerMixin, APIView):
 
     def delete(self, request, project_id, issue_id):
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet ou problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -363,11 +396,19 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
         for contributor in contributors:
             contributors_user_ids.append(contributor.user_id.id)
 
-        projects = Projects.objects.get(id=project_id)
+        try:
+            projects = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         comment = Comments.objects.filter(issue_id=issue)
 
@@ -392,17 +433,23 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
         for contributor in contributors:
             contributors_user_ids.append(contributor.user_id.id)
 
-        projects = Projects.objects.get(id=project_id)
-
         current_user = User.objects.get(id=request.user.id)
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        try:
+            projects = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         data = request.data
 
         serializer = self.serializer_class(data=data)
-
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
 
         if (
             current_user.id not in contributors_user_ids
@@ -441,13 +488,25 @@ class CommentView(MultipleSerializerMixin, APIView):
         for contributor in contributors:
             contributors_user_ids.append(contributor.user_id.id)
 
-        projects = Projects.objects.get(id=project_id)
-
         current_user = User.objects.get(id=request.user.id)
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        try:
+            projects = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
-        comment = Comments.objects.get(id=comment_id, issue_id=issue)
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            comment = Comments.objects.get(id=comment_id, issue_id=issue)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Commentaire non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         if (
             current_user.id not in contributors_user_ids
@@ -468,11 +527,19 @@ class CommentView(MultipleSerializerMixin, APIView):
     def put(self, request, project_id, issue_id, comment_id):
         data = request.data
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
-
-        comment = Comments.objects.get(id=comment_id, issue_id=issue)
-
         current_user = User.objects.get(id=request.user.id)
+
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            comment = Comments.objects.get(id=comment_id, issue_id=issue)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Commentaire non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(comment, data=data)
 
@@ -495,9 +562,17 @@ class CommentView(MultipleSerializerMixin, APIView):
 
     def delete(self, request, project_id, issue_id, comment_id):
 
-        issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        try:
+            issue = Issues.objects.get(id=issue_id, project_id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Problème non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
-        comment = Comments.objects.get(id=comment_id, issue_id=issue)
+        try:
+            comment = Comments.objects.get(id=comment_id, issue_id=issue)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Commentaire non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
