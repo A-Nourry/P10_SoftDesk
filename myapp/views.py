@@ -29,6 +29,7 @@ class MultipleSerializerMixin:
 
 
 class ProjectView(MultipleSerializerMixin, APIView):
+    """View for /project/"""
 
     permission_classes = [IsAuthenticated]
 
@@ -70,6 +71,7 @@ class ProjectView(MultipleSerializerMixin, APIView):
 
 
 class DetailProjectView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>"""
 
     permission_classes = [IsAuthenticated]
 
@@ -159,25 +161,44 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
 
 
 class ContributorsView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>/users/"""
 
     permission_classes = [IsAuthenticated]
 
     serializer_class = ContributorsSerializer
 
     def get(self, request, project_id, *args, **kwargs):
+        try:
+            project = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
-        contributors = Contributors.objects.filter(project_id=project_id)
+        contributors = Contributors.objects.filter(project_id=project)
 
         serializer = self.serializer_class(contributors, many=True)
 
-        return Response(serializer.data)
+        if len(contributors) > 0:
+            return Response(serializer.data)
+
+        else:
+            response = {
+                "message": "Ce projet n'a pas de contributeurs.",
+            }
+
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, project_id):
         data = request.data
 
         serializer = self.serializer_class(data=data)
 
-        project = Projects.objects.get(id=project_id)
+        try:
+            project = Projects.objects.get(id=project_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Projet non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
+
         author = project.author_user_id
         current_user = User.objects.get(id=request.user.id)
 
@@ -205,6 +226,7 @@ class ContributorsView(MultipleSerializerMixin, APIView):
 
 
 class UserContributorsView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>/users/<user_id>"""
 
     permission_classes = [IsAuthenticated]
 
@@ -218,7 +240,11 @@ class UserContributorsView(MultipleSerializerMixin, APIView):
             response = {"message": "Projet non trouvé ! " + str(e)}
             return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
-        user = User.objects.get(id=user_id)
+        try:
+            user = User.objects.get(id=user_id)
+        except ObjectDoesNotExist as e:
+            response = {"message": "Utilisateur non trouvé ! " + str(e)}
+            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
 
@@ -241,6 +267,7 @@ class UserContributorsView(MultipleSerializerMixin, APIView):
 
 
 class ProjectIssueView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>/issues/"""
 
     permission_classes = [IsAuthenticated]
 
@@ -322,6 +349,7 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
 
 
 class IssueView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>/issues/<issue_id>"""
 
     permission_classes = [IsAuthenticated]
 
@@ -384,6 +412,7 @@ class IssueView(MultipleSerializerMixin, APIView):
 
 
 class IssueCommentView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>/issues/<issue_id>/comments/"""
 
     permission_classes = [IsAuthenticated]
 
@@ -396,18 +425,13 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
         for contributor in contributors:
             contributors_user_ids.append(contributor.user_id.id)
 
-        try:
-            projects = Projects.objects.get(id=project_id)
-        except ObjectDoesNotExist as e:
-            response = {"message": "Projet non trouvé ! " + str(e)}
-            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
-
         current_user = User.objects.get(id=request.user.id)
 
         try:
+            projects = Projects.objects.get(id=project_id)
             issue = Issues.objects.get(id=issue_id, project_id=project_id)
         except ObjectDoesNotExist as e:
-            response = {"message": "Problème non trouvé ! " + str(e)}
+            response = {"message": "Problème ou projet non trouvé ! : " + str(e)}
             return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         comment = Comments.objects.filter(issue_id=issue)
@@ -421,10 +445,15 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
             return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
 
         else:
+            if len(comment) > 0:
+                serializer = self.serializer_class(comment, many=True)
+                return Response(serializer.data)
+            else:
+                response = {
+                    "message": "Il n'a pas encore de commentaire sur ce problème.",
+                }
 
-            serializer = self.serializer_class(comment, many=True)
-
-            return Response(serializer.data)
+                return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, project_id, issue_id):
         contributors = Contributors.objects.filter(project_id=project_id)
@@ -476,6 +505,7 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
 
 
 class CommentView(MultipleSerializerMixin, APIView):
+    """View for /project/<project_id>/issues/<issue_id>/comments/<comment_id>"""
 
     permission_classes = [IsAuthenticated]
 
@@ -492,20 +522,12 @@ class CommentView(MultipleSerializerMixin, APIView):
 
         try:
             projects = Projects.objects.get(id=project_id)
-        except ObjectDoesNotExist as e:
-            response = {"message": "Projet non trouvé ! " + str(e)}
-            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
-
-        try:
             issue = Issues.objects.get(id=issue_id, project_id=project_id)
-        except ObjectDoesNotExist as e:
-            response = {"message": "Problème non trouvé ! " + str(e)}
-            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
-
-        try:
             comment = Comments.objects.get(id=comment_id, issue_id=issue)
         except ObjectDoesNotExist as e:
-            response = {"message": "Commentaire non trouvé ! " + str(e)}
+            response = {
+                "message": "Projet, problème ou commentaire non trouvé ! : " + str(e)
+            }
             return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         if (
@@ -531,14 +553,11 @@ class CommentView(MultipleSerializerMixin, APIView):
 
         try:
             issue = Issues.objects.get(id=issue_id, project_id=project_id)
-        except ObjectDoesNotExist as e:
-            response = {"message": "Problème non trouvé ! " + str(e)}
-            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
-
-        try:
             comment = Comments.objects.get(id=comment_id, issue_id=issue)
         except ObjectDoesNotExist as e:
-            response = {"message": "Commentaire non trouvé ! " + str(e)}
+            response = {
+                "message": "Projet, problème ou commentaire non trouvé ! : " + str(e)
+            }
             return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.serializer_class(comment, data=data)
@@ -564,14 +583,11 @@ class CommentView(MultipleSerializerMixin, APIView):
 
         try:
             issue = Issues.objects.get(id=issue_id, project_id=project_id)
-        except ObjectDoesNotExist as e:
-            response = {"message": "Problème non trouvé ! " + str(e)}
-            return Response(data=response, status=status.HTTP_404_NOT_FOUND)
-
-        try:
             comment = Comments.objects.get(id=comment_id, issue_id=issue)
         except ObjectDoesNotExist as e:
-            response = {"message": "Commentaire non trouvé ! " + str(e)}
+            response = {
+                "message": "Projet, problème ou commentaire non trouvé ! : " + str(e)
+            }
             return Response(data=response, status=status.HTTP_404_NOT_FOUND)
 
         current_user = User.objects.get(id=request.user.id)
