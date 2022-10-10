@@ -125,14 +125,14 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
                 "data": serializer.data,
             }
 
-            return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response, status=status.HTTP_200_OK)
 
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
     def delete(self, request, project_id):
 
@@ -151,13 +151,13 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
                 "message": "Projet supprimé avec succès !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_200_OK)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
 
 class ContributorsView(MultipleSerializerMixin, APIView):
@@ -222,7 +222,7 @@ class ContributorsView(MultipleSerializerMixin, APIView):
                 "message": "Ce contributeur a déjà été ajouté ou vous n'êtes pas l'auteur de ce projet !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
 
 class UserContributorsView(MultipleSerializerMixin, APIView):
@@ -257,13 +257,13 @@ class UserContributorsView(MultipleSerializerMixin, APIView):
                 "message": "contributeur supprimé du projet avec succès !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_200_OK)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce projet : action non autorisé !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
 
 class ProjectIssueView(MultipleSerializerMixin, APIView):
@@ -297,7 +297,7 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
         ):
             response = {"message": "Vous n'avez pas accès à ce projet !"}
 
-            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
         else:
             serializer = self.serializer_class(issue, many=True)
@@ -332,7 +332,7 @@ class ProjectIssueView(MultipleSerializerMixin, APIView):
                 "message": "Vous ne participez pas à ce projet : Accès non autorisé !"
             }
 
-            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
         else:
             if serializer.is_valid():
@@ -360,6 +360,7 @@ class IssueView(MultipleSerializerMixin, APIView):
 
         try:
             issue = Issues.objects.get(id=issue_id, project_id=project_id)
+            print(issue)
         except ObjectDoesNotExist as e:
             response = {"message": "Projet ou problème non trouvé ! " + str(e)}
             return Response(data=response, status=status.HTTP_404_NOT_FOUND)
@@ -376,14 +377,18 @@ class IssueView(MultipleSerializerMixin, APIView):
                 "data": serializer.data,
             }
 
-            return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response, status=status.HTTP_200_OK)
 
         else:
-            response = {
-                "message": "Vous n'êtes pas l'auteur de ce problème : action non autorisé !",
-            }
+            if serializer.is_valid():
+                response = {
+                    "message": "Vous n'êtes pas l'auteur de ce problème : action non autorisé !",
+                }
 
-            return Response(data=response)
+                return Response(data=response, status=status.HTTP_403_FORBIDDEN)
+            else:
+
+                return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, project_id, issue_id):
 
@@ -402,13 +407,13 @@ class IssueView(MultipleSerializerMixin, APIView):
                 "message": "Problème supprimé avec succès !",
             }
 
-            return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response, status=status.HTTP_200_OK)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce problème: action non autorisé !",
             }
 
-        return Response(data=response)
+        return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
 
 class IssueCommentView(MultipleSerializerMixin, APIView):
@@ -442,7 +447,7 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
         ):
             response = {"message": "Vous n'avez pas accès à ce projet !"}
 
-            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
         else:
             if len(comment) > 0:
@@ -488,7 +493,7 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
                 "message": "Vous ne participez pas à ce projet : Accès non autorisé !"
             }
 
-            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
         else:
             if serializer.is_valid():
@@ -499,7 +504,7 @@ class IssueCommentView(MultipleSerializerMixin, APIView):
                     "data": serializer.data,
                 }
 
-                return Response(data=response, status=status.HTTP_201_CREATED)
+                return Response(data=response, status=status.HTTP_200_OK)
 
             return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -538,7 +543,7 @@ class CommentView(MultipleSerializerMixin, APIView):
                 "message": "Vous ne participez pas à ce projet : Accès refusé !"
             }
 
-            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
         else:
 
@@ -570,14 +575,14 @@ class CommentView(MultipleSerializerMixin, APIView):
                 "data": serializer.data,
             }
 
-            return Response(data=response, status=status.HTTP_201_CREATED)
+            return Response(data=response, status=status.HTTP_200_OK)
 
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce commentaire : action non autorisé !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
     def delete(self, request, project_id, issue_id, comment_id):
 
@@ -599,10 +604,10 @@ class CommentView(MultipleSerializerMixin, APIView):
                 "message": "Commentaire supprimé avec succès !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_200_OK)
         else:
             response = {
                 "message": "Vous n'êtes pas l'auteur de ce commentaire: action non autorisé !",
             }
 
-            return Response(data=response)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
