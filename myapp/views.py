@@ -98,7 +98,7 @@ class DetailProjectView(MultipleSerializerMixin, APIView):
         ):
             response = {"message": "Vous n'avez pas accès à ce projet !"}
 
-            return Response(data=response, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data=response, status=status.HTTP_403_FORBIDDEN)
 
         else:
             serializer = self.serializer_class(projects, many=False)
